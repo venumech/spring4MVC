@@ -1,4 +1,4 @@
-Enter file contents herenotes:
+Notes:
 
 1.	The primary technologies that I have used are java8 / jee; spring STS ide(3.7); gradle build tool; Stax parser; Oracle 12c; PL/SQL; jquery/css/ajax; Spring MVC (spring 4 version) with no xml config files but rich set of Annotations; jetty9 and apache-tomcat-7.0.63 server servlet3 container and some other open source frame works like logback, google’s gson.
 
