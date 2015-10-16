@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           elementFormDefault="qualified">
+    <xs:complexType name="order">
+        <xs:sequence>
+            <xs:element name="from" type="location"/>
+            <xs:element name="to" type="location"/>
+            <xs:element name="lines" type="lines"/>
+            <xs:element name="instructions" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="location">
+        <xs:attribute name="city" use="optional" type="xs:string"/>
+        <xs:attribute name="state" use="optional" type="xs:string"/>
+        <xs:attribute name="zip" use="required" type="xs:string"/>
+    </xs:complexType>
+    <xs:complexType name="lines">
+        <xs:sequence>
+            <xs:element name="line" maxOccurs="unbounded" type="line"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="line">
+        <xs:attribute name="hazard" use="optional" default="false" type="xs:boolean"/>
+        <xs:attribute name="product" use="required" type="xs:string"/>
+        <xs:attribute name="volume" use="required" type="xs:double"/>
+        <xs:attribute name="weight" use="required" type="xs:double"/>
+    </xs:complexType>
+    <xs:element name="order" type="order"/>
+</xs:schema> 
