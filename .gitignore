@@ -2,10 +2,17 @@
 *.class
 *.settings/
 *.gradle
-*.project
+/.project
+/.metadata/
+/.recommenders/
+
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
+#app props
+application.properties
+
+/target/
 # Package Files #
 *.jar
 *.war
@@ -14,4 +21,8 @@ bin/
 build/
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
-/Technical Document.pdf
+/.classpath
+/.gitignore
+/.springBeans
+/mvnw
+/mvnw.cmd
