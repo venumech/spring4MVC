@@ -26,7 +26,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 @EnableWebMvc //<mvc:annotation-driven />
 @Configuration
-@PropertySource("classpath:application.properties")
+@PropertySource({"classpath:application.properties","classpath:order.xsd"}) //multiple files in classpath
 @ComponentScan(basePackages = { "com.venu.springmvc.*, com.venu.test, com.venu.develop.*" }) //takes multiples!
 public class OrderProcessWebConfig extends WebMvcConfigurerAdapter {
  
