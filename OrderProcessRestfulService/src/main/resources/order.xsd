@@ -11,7 +11,7 @@
     </xs:complexType>
     <xs:complexType name="location">
         <xs:attribute name="city" use="optional" type="xs:string"/>
-        <xs:attribute name="state" use="optional" type="xs:string"/>
+        <xs:attribute name="state" use="required" type="xs:string"/>
         <xs:attribute name="zip" use="required" type="xs:string"/>
     </xs:complexType>
     <xs:complexType name="lines">

@@ -17,7 +17,7 @@ import java.io.Serializable;
 public class LineItem implements Serializable{
     private Double weight; 
     private Double volume;
-    private Boolean hazard;
+    private Boolean hazard = false;
     private String product;
     
     public LineItem(){}
