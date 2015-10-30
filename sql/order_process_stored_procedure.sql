@@ -1,5 +1,8 @@
 CREATE OR REPLACE PACKAGE ORDER_PROCESS_PACKAGE AS
-      -- Standard version
+
+-- declare only public visible procedures/functions in the specification section.
+
+      -- version: 2.1 ( Standard version)
       PROCEDURE SAVE_ORDER_SP (l_from_address IN  address_obj,
                               l_to_address IN  address_obj,
                               l_line_items IN  Lines_table,
@@ -7,7 +10,7 @@ CREATE OR REPLACE PACKAGE ORDER_PROCESS_PACKAGE AS
                               order_id OUT ORDERS.id%type,
                               message OUT varchar2);
       
-      --Version 1(dynamic sql execution)
+      -- Version 1(dynamic sql execution)
       PROCEDURE SAVE_ORDER_VER_1_SP (
                               from_city IN ADDRESS.city%type,
                               from_state IN ADDRESS.state%type,
@@ -26,7 +29,6 @@ CREATE OR REPLACE PACKAGE ORDER_PROCESS_PACKAGE AS
                               l_to_address out  address_obj,
                               l_order_id IN  ORDERS.id%type,
                               message IN out varchar2);
- PROCEDURE SAVE_EXCEPTION (message varchar2, fhandle in out utl_file.file_type );
 
  
 END ORDER_PROCESS_PACKAGE;
@@ -35,8 +37,19 @@ show errors;
 /
 
 CREATE OR REPLACE PACKAGE BODY ORDER_PROCESS_PACKAGE AS
+
 /*
- version: 2.1
+SAVE_EXCEPTION is a private procedure used internally for the other procedures/functions to access it. 
+Thus it need not be declared in the package specification.
+We will get a compile error if the private procedure is referenced in the package body 
+before it is declared or defined. To avoid that, declare the private procedure at the beginning of the package body 
+(using the same kind of declaration you would use in the package head); then it can be defined anywhere in the package body. 
+*/
+
+ PROCEDURE SAVE_EXCEPTION (message varchar2, fhandle in out utl_file.file_type );
+
+/*
+ version: 2.1 ( Standard version)
  saves the order data into 3 tables and the Order Id is populated with the data.
 */
 PROCEDURE SAVE_ORDER_SP (
@@ -208,7 +221,7 @@ BEGIN
  END SAVE_ORDER_SP;
  
  /*
-  SP Version: 1
+  SP Version: Version 1(dynamic sql execution)
   Saves the order data into 3 tables and the Order Id is populated with the data.
   This version employs the dynamic sql execution for inserting data
  */
@@ -228,6 +241,7 @@ BEGIN
     l_order_id number;
     l_from_address_id varchar2(50);
     l_to_address_id varchar2(50);
+    l_temp_str varchar2(5000);
     l_row_count number;
     fhandle utl_file.file_type;
     
@@ -241,12 +255,7 @@ BEGIN
      fhandle := utl_file.fopen('LOG_DIR', 'save_order_ver_1_sp.log', 'a');
      UTL_FILE.PUT_LINE(fhandle, '__________________________________________________________________________________');
      UTL_FILE.PUT_LINE(fhandle, 'Date= '|| to_char(sysdate,'yyyy-dd-mm hh:mi:ss'));
-     UTL_FILE.PUT_LINE(fhandle, '      fetching from seq. l_order_id= '|| l_order_id);
- 
- select order_id_seq.nextval into l_order_id from dual;                          
- order_id  :=  l_order_id;                                                       
-        dbms_output.put_line('l_order_id=' || l_order_id);
-     UTL_FILE.PUT_LINE(fhandle, '      fetching from seq. l_order_id= '|| l_order_id);
+
                                       
          dbms_output.put_line('inserting into the new values into address..');    
                                                                                  
@@ -263,7 +272,9 @@ BEGIN
         
      UTL_FILE.PUT_LINE(fhandle, '      The ''From'' address details not exists in ''ADDRESS'' so, inserting. l_from_address_id= '|| l_from_address_id);
         dbms_output.put_line('inserting into the new values into address..');    
-                                                                                 
+ 
+     SAVEPOINT from_address_savepoint;
+          
         insert into ADDRESS (address_id, city, state ,zip)                       
         values (l_from_address_id, from_city, from_state, from_zip);             
         commit;                                                                  
@@ -294,8 +305,7 @@ BEGIN
             if (SQL%ROWCOUNT =0)
             then
                 RAISE address_insert_error; 
-            end if;
-            commit;                                                              
+            end if;                                                             
          else                                                                    
          select address_id into l_to_address_id                                  
  		from ADDRESS                                                                  
@@ -304,7 +314,14 @@ BEGIN
  		  and UPPER(zip)=UPPER(to_zip);                                               
  	 dbms_output.put_line('TO address already exists');                            
      end if;                                                                     
-                                                                                 
+
+     UTL_FILE.PUT_LINE(fhandle, '      fetching from seq, order_id_seq.');
+ 
+ select order_id_seq.nextval into l_order_id from dual;                          
+ order_id  :=  l_order_id;                                                       
+        dbms_output.put_line('l_order_id=' || l_order_id);
+     UTL_FILE.PUT_LINE(fhandle, '      fetched from seq. l_order_id= '|| l_order_id);
+     
      -- inserting into table, ORDERS.
      UTL_FILE.PUT_LINE(fhandle, '      inserting into table, ORDERS.');
  
@@ -320,8 +337,7 @@ BEGIN
             message := 'data NOT inserted into ORDER';                              
             dbms_output.put_line('data NOT inserted into ORDER');
             UTL_FILE.PUT_LINE(fhandle, '      data NOT inserted into table, ORDERS.');
-            
-            rollback;                  
+                            
             raise order_insert_error;                                              
      end if;                                                                     
                                                                                  
@@ -330,7 +346,12 @@ BEGIN
      if l_row_count = 1                                                          
         then                                                                                
            dbms_output.put_line(replace(dynamic_line_item_sql,':order_id_val',l_order_id));                                                                         
-           dynamic_line_item_sql :=  replace(dynamic_line_item_sql,':order_id_val',l_order_id);                                                                     
+           dynamic_line_item_sql :=  replace(dynamic_line_item_sql,':order_id_val',l_order_id);
+           l_temp_str := replace (dynamic_line_item_sql, '''', '''''');
+           --UTL_FILE.PUT_LINE(fhandle, '      dynamic SQl for LINE_ITEMS table=' || '''');
+           --UTL_FILE.PUT_LINE(fhandle, '      dynamic SQl for LINE_ITEMS table=' || replace(dynamic_line_item_sql,'''',''''''));
+           -- UTL_FILE.PUT_LINE(fhandle, '      dynamic SQl for LINE_ITEMS table=' || dbms_assert.enquote_literal( l_temp_str));
+           --UTL_FILE.PUT_LINE(fhandle, '      dynamic SQl for LINE_ITEMS table=' || l_temp_str);
            EXECUTE IMMEDIATE dynamic_line_item_sql; 
      end if;                                                                     
                                                                                  
@@ -343,26 +364,36 @@ BEGIN
              message := 'data NOT inserted into line_items. transaction rolled back!';                                                                               
              dbms_output.put_line('data NOT inserted into line_items');  
              UTL_FILE.PUT_LINE(fhandle, '      data NOT inserted into line_items. row count' || l_row_count);             
-             rollback;
              raise LineItems_insert_error;
      end if;                                                                     
    
+     commit;
+     UTL_FILE.PUT_LINE(fhandle, '      The procedure is executed successfully for the order id =' ||l_order_id);
      UTL_FILE.fclose(fhandle);                                                                              
      
      EXCEPTION 
      WHEN address_insert_error THEN
+          ROLLBACK TO from_address_savepoint;
           message := 'data NOT inserted into ADDRESS. transaction rolled back!';
          SAVE_EXCEPTION(message,fhandle);
      WHEN order_insert_error THEN
+          ROLLBACK TO from_address_savepoint;
           message := 'data NOT inserted into Order. transaction rolled back!';
          SAVE_EXCEPTION(message,fhandle);
      WHEN LineItems_insert_error THEN
+          ROLLBACK TO from_address_savepoint;
           message := 'data NOT inserted into LineItems. transaction rolled back!';
          SAVE_EXCEPTION(message,fhandle);         
  
      WHEN NO_DATA_FOUND THEN 
+          ROLLBACK TO from_address_savepoint;
           message := 'A SELECT...INTO did not return any row.!';
-         SAVE_EXCEPTION(message,fhandle);
+          SAVE_EXCEPTION(message,fhandle);
+         
+     WHEN OTHERS THEN 
+	  message := SQLCODE || ': '|| SQLERRM || '. Data Base Error Occured for the Order Id : ' || l_order_id;
+          SAVE_EXCEPTION(message,fhandle);
+          ROLLBACK TO from_address_savepoint;
   END SAVE_ORDER_VER_1_SP; 
  
  
